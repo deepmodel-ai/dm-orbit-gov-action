@@ -6,17 +6,21 @@ author: 'DeepModel'
 
 inputs:
   orbit_scanner_token:
-    description: 'Orbit scanner credential token (orb_sc_…). Store as a repo secret.'
+    description: 'Orbit scanner credential (orb_sc_…). Pass secrets.ORBIT_SCANNER_TOKEN — not vars.'
     required: true
   agent_spec_identifier:
-    description: 'Capability identifier (UUID). Use with target_role.'
+    description: >-
+      Capability UUID. Use with target_role. Pass secrets.ORBIT_AGENT_SPEC_IDENTIFIER
+      (Secrets tab). Do not use vars.* for a value stored as a Secret.
     required: false
   target_role:
     description: 'CANDIDATE or PRODUCTION (default CANDIDATE).'
     required: false
     default: 'CANDIDATE'
   agent_spec_id:
-    description: 'Pinned AgentSpec version id (UUID). Alternative to identifier+role.'
+    description: >-
+      Pinned AgentSpec version UUID (alternative to identifier+role).
+      Pass secrets.ORBIT_AGENT_SPEC_ID when using this form.
     required: false
   repository:
     description: 'Canonical github:owner/repo when credential is repo-scoped. Defaults from GITHUB_REPOSITORY.'

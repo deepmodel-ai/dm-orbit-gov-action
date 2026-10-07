@@ -29,7 +29,10 @@ def parse_bool(raw: str, default: bool) -> bool:
 def read_run_options() -> RunOptions:
     orbit_scanner_token = (os.environ.get("INPUT_ORBIT_SCANNER_TOKEN") or "").strip()
     if not orbit_scanner_token:
-        raise ValueError("INPUT_ORBIT_SCANNER_TOKEN is required (orb_sc_…)")
+        raise ValueError(
+            "INPUT_ORBIT_SCANNER_TOKEN is required (orb_sc_…). "
+            "In the workflow use: orbit_scanner_token: ${{ secrets.ORBIT_SCANNER_TOKEN }}"
+        )
 
     fail_on_required = parse_bool(os.environ.get("INPUT_FAIL_ON_REQUIRED", "true"), True)
     source = (os.environ.get("INPUT_SOURCE") or "ci").strip().lower()
@@ -56,7 +59,11 @@ def read_run_options() -> RunOptions:
         agent_spec_identifier = None
         target_role = None
     elif not agent_spec_identifier:
-        raise ValueError("INPUT_AGENT_SPEC_IDENTIFIER (with target_role) or INPUT_AGENT_SPEC_ID is required")
+        raise ValueError(
+            "agent_spec_identifier (with target_role) or agent_spec_id is required. "
+            "Pass a Secret, e.g. agent_spec_identifier: ${{ secrets.ORBIT_AGENT_SPEC_IDENTIFIER }} "
+            "(not vars.* — Secrets and Variables are different in GitHub Actions)."
+        )
     if target_role and target_role not in {"CANDIDATE", "PRODUCTION"}:
         raise ValueError("INPUT_TARGET_ROLE must be CANDIDATE or PRODUCTION")
 

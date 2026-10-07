@@ -14,7 +14,20 @@ Reusable **composite** GitHub Action (Python) for **Orbit AI Governance** eviden
 
 ## Install in an agent repo
 
-Repo secret: `ORBIT_SCANNER_TOKEN` (`orb_sc_…` from Orbit Admin → scanner credentials).
+### 1. Create repository secrets
+
+Settings → Secrets and variables → Actions → **Secrets** (not Variables):
+
+| Secret | Value |
+|--------|--------|
+| `ORBIT_SCANNER_TOKEN` | Opaque `orb_sc_…` from Orbit Admin → scanner credentials |
+| `ORBIT_AGENT_SPEC_IDENTIFIER` | Capability UUID (`agent_spec_identifier`) |
+
+Optional alternative to the identifier: secret `ORBIT_AGENT_SPEC_ID` (pinned version UUID).
+
+`secrets.*` and `vars.*` are different. If you store a value under Secrets, the workflow must use `${{ secrets.NAME }}`. Using `${{ vars.NAME }}` for a Secret leaves the input empty and the Action fails with “AGENT_SPEC_IDENTIFIER … or AGENT_SPEC_ID is required”.
+
+### 2. Workflow
 
 ```yaml
 name: Orbit governance evidence
@@ -34,23 +47,33 @@ jobs:
         with:
           fetch-depth: 0
       - name: Orbit governance scan
-        uses: deepmodel-ai/dm-orbit-gov-action@v0.1.0
+        uses: deepmodel-ai/dm-orbit-gov-action@feature-dm-2239-scanner-evaluate-bridge
         with:
           orbit_scanner_token: ${{ secrets.ORBIT_SCANNER_TOKEN }}
-          agent_spec_identifier: ${{ vars.ORBIT_AGENT_SPEC_IDENTIFIER }}
+          agent_spec_identifier: ${{ secrets.ORBIT_AGENT_SPEC_IDENTIFIER }}
           target_role: CANDIDATE
 ```
 
-Pin to a release tag. Do not use `@master` in customer workflows.
+Pinned version instead of identifier + role:
+
+```yaml
+        with:
+          orbit_scanner_token: ${{ secrets.ORBIT_SCANNER_TOKEN }}
+          agent_spec_id: ${{ secrets.ORBIT_AGENT_SPEC_ID }}
+```
+
+The Action does **not** read GitHub secrets by name automatically — you must pass them via `with:`.
+
+Pin to a release tag when available. Do not use `@master` in customer workflows.
 
 ## Inputs
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `orbit_scanner_token` | yes | — | Opaque `orb_sc_…` scanner credential |
-| `agent_spec_identifier` | one of* | — | Capability UUID (with `target_role`) |
+| `orbit_scanner_token` | yes | — | Opaque `orb_sc_…` (pass `${{ secrets.ORBIT_SCANNER_TOKEN }}`) |
+| `agent_spec_identifier` | one of* | — | Capability UUID; use with `target_role` (pass `${{ secrets.ORBIT_AGENT_SPEC_IDENTIFIER }}`) |
 | `target_role` | with identifier | `CANDIDATE` | `CANDIDATE` or `PRODUCTION` |
-| `agent_spec_id` | one of* | — | Pinned AgentSpec version UUID |
+| `agent_spec_id` | one of* | — | Pinned AgentSpec version UUID (pass `${{ secrets.ORBIT_AGENT_SPEC_ID }}`) |
 | `repository` | no | from `GITHUB_REPOSITORY` | Canonical `github:owner/repo` if credential is repo-scoped |
 | `fail_on_required` | no | `true` | Fail job if Required controls fail |
 | `source` | no | `ci` | `ci` or `local` |
@@ -83,7 +106,7 @@ python scripts/run_local_action_test.py
 | Case | Result |
 |------|--------|
 | Missing / invalid `orb_sc_` | Job fails (401 from Orbit via MCP) |
-| Missing agent_spec targeting | Job fails at input validation |
+| Empty targeting (`vars` used for a Secret, or secret unset) | Job fails: identifier or `agent_spec_id` required |
 | MCP / Orbit HTTP / timeout | Job fails with error annotation |
 | Required control `passed=false` | Job fails when `fail_on_required=true` |
 | Recommended-only failures | Job succeeds (outputs still list findings) |
