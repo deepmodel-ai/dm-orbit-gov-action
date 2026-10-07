@@ -9,11 +9,15 @@ class RunOptions(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     orbit_mcp_url: str
-    orbit_governance_key: str
+    orbit_scanner_token: str
     fail_on_required: bool
     source: str
     commit_sha: str
     scan_id: str | None = None
+    agent_spec_identifier: str
+    target_role: str
+    repository: str | None = None
+    run_url: str | None = None
 
 
 class ChangedFile(BaseModel):

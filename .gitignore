@@ -12,7 +12,7 @@ build/
 
 # Env / local secrets
 .env
-.env.*
+.env.local
 .envrc
 scripts/run_local_action_test.local.py
 

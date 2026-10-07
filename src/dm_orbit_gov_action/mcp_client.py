@@ -107,12 +107,12 @@ def extract_tool_object(tool_result: Any) -> dict[str, Any]:
 class OrbitMcpClient:
     """One MCP session: initialize once, then call tools."""
 
-    def __init__(self, mcp_url: str, governance_key: str) -> None:
+    def __init__(self, mcp_url: str, scanner_token: str) -> None:
         self.mcp_url = mcp_url
-        self.governance_key = governance_key
+        self.scanner_token = scanner_token
         self.session_id: str | None = None
         self.next_id = 1
-        self.http = httpx.Client(timeout=120.0)
+        self.http = httpx.Client(timeout=180.0)
 
     def close(self) -> None:
         self.http.close()
@@ -188,7 +188,7 @@ class OrbitMcpClient:
         headers = {
             "Accept": "application/json, text/event-stream",
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.governance_key}",
+            "Authorization": f"Bearer {self.scanner_token}",
         }
         if self.session_id:
             headers["mcp-session-id"] = self.session_id

@@ -6,21 +6,26 @@ Reusable **composite** GitHub Action (Python) for **Orbit AI Governance** eviden
 
 ## What it does
 
-1. Calls hosted **dm-orbit-mcp** `health` (connectivity check).
+1. Calls hosted **dm-orbit-mcp** `health` (auth + connectivity).
 2. Collects **changed files** for the PR/push (capped; never uploads the full repo).
-3. Calls MCP `validate_changed_files` with that structured payload.
-4. **Orbit API** (via MCP) loads customer controls and runs LLM validation — not this Action.
+3. Calls MCP `validate_changed_files` with that payload.
+4. **Orbit API** (via MCP) loads applicable controls, runs LLM evaluation, and writes scanner evidence.
 5. Fails the job when any **Required** control has `passed=false` (default).
-
-No Docker image. No binary Action distribution. Composite Action + Python source only.
 
 ## Install in an agent repo
 
-Repo secrets:
+### 1. Create repository secrets
 
-| Secret | Purpose |
-|--------|---------|
-| `ORBIT_GOVERNANCE_KEY` | Bearer key forwarded to Orbit via MCP |
+Settings → Secrets and variables → Actions → **Secrets** (not Variables):
+
+| Secret | Value |
+|--------|--------|
+| `ORBIT_SCANNER_TOKEN` | Opaque `orb_sc_…` from Orbit Admin → scanner credentials |
+| `ORBIT_AGENT_SPEC_IDENTIFIER` | Capability UUID (`agent_spec_identifier`) |
+
+`secrets.*` and `vars.*` are different. Store values under Secrets and pass `${{ secrets.NAME }}`.
+
+### 2. Workflow
 
 ```yaml
 name: Orbit governance evidence
@@ -40,22 +45,31 @@ jobs:
         with:
           fetch-depth: 0
       - name: Orbit governance scan
-        uses: deepmodel-ai/dm-orbit-gov-action@v0.1.0
+        uses: deepmodel-ai/dm-orbit-gov-action@v0.2.0
         with:
-          orbit_governance_key: ${{ secrets.ORBIT_GOVERNANCE_KEY }}
+          orbit_scanner_token: ${{ secrets.ORBIT_SCANNER_TOKEN }}
+          agent_spec_identifier: ${{ secrets.ORBIT_AGENT_SPEC_IDENTIFIER }}
+          target_role: CANDIDATE
 ```
 
-Pin the Action to a release tag (create `v0.1.0` after you publish). Do not use `@master` in customer workflows.
+Pin to a release tag (`@v0.2.0`). Do not use `@master` or a feature branch in customer workflows.
+
+The Action does **not** read GitHub secrets by name automatically — pass them via `with:`.
+
+Targeting is **capability + role only** (`agent_spec_identifier` + `target_role`). There is no `agent_spec_id` input on this Action.
 
 ## Inputs
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `orbit_governance_key` | yes | — | Orbit governance Bearer key |
-| `fail_on_required` | no | `true` | Fail job if any Required control fails |
+| `orbit_scanner_token` | yes | — | Opaque `orb_sc_…` |
+| `agent_spec_identifier` | yes | — | Capability UUID |
+| `target_role` | no | `CANDIDATE` | `CANDIDATE` or `PRODUCTION` |
+| `repository` | no | from `GITHUB_REPOSITORY` | Canonical `github:owner/repo` if credential is repo-scoped |
+| `fail_on_required` | no | `true` | Fail job if Required controls fail |
 | `source` | no | `ci` | `ci` or `local` |
 
-**Not customer inputs:** Orbit API base URL, MCP URL, AI gateway URL/key/model.
+**Not customer inputs:** Orbit API base URL, MCP URL, AI gateway secrets.
 
 ## Outputs
 
@@ -63,7 +77,7 @@ Pin the Action to a release tag (create `v0.1.0` after you publish). Do not use 
 |--------|-------------|
 | `controls_evaluated` | Number of controls evaluated |
 | `required_failed` | Number of Required controls that failed |
-| `tier` | Tier returned by Orbit |
+| `tier` | Tier key returned by Orbit |
 | `results` | JSON array of per-control results |
 | `raw_llm_output` | Raw LLM JSON from Orbit |
 
@@ -71,33 +85,16 @@ Pin the Action to a release tag (create `v0.1.0` after you publish). Do not use 
 
 ```bash
 python -m pip install -e ".[dev]"
-# PowerShell:
-#   $env:ORBIT_GOVERNANCE_KEY="your-key"
-# bash:
-#   export ORBIT_GOVERNANCE_KEY=your-key
+cp .env.example .env   # fill ORBIT_SCANNER_TOKEN + INPUT_AGENT_SPEC_IDENTIFIER
 python scripts/run_local_action_test.py
 ```
 
-## Layout
+## Failure behavior
 
-```text
-action.yml
-src/dm_orbit_gov_action/
-  config.py          # hardcoded ORBIT_MCP_URL
-  inputs.py
-  models.py
-  mcp_client.py
-  changed_files.py
-  runner.py
-  github_io.py
-fixtures/sample_agent/   # local smoke fixtures
-scripts/run_local_action_test.py
-tests/
-```
-
-## Development
-
-```bash
-python -m pip install -e ".[dev]"
-pytest -q
-```
+| Case | Result |
+|------|--------|
+| Missing / invalid `orb_sc_` | Job fails (401 from Orbit via MCP) |
+| Empty identifier (`vars` used for a Secret) | Job fails at input validation |
+| MCP / Orbit HTTP / timeout | Job fails with error annotation |
+| Required control `passed=false` | Job fails when `fail_on_required=true` |
+| Recommended-only failures | Job succeeds (outputs still list findings) |

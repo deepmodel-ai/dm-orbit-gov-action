@@ -1,13 +1,25 @@
 name: 'Orbit Governance Evidence'
 description: >
   Collect capped changed files and call hosted Orbit MCP validate_changed_files.
-  LLM evaluation and customer control lookup run in Orbit API (not in this Action).
+  LLM evaluation, control lookup, and scanner evidence writes run in Orbit API.
 author: 'DeepModel'
 
 inputs:
-  orbit_governance_key:
-    description: 'Orbit governance API key (Bearer). Stored as a repo secret.'
+  orbit_scanner_token:
+    description: 'Orbit scanner credential (orb_sc_…). Pass secrets.ORBIT_SCANNER_TOKEN — not vars.'
     required: true
+  agent_spec_identifier:
+    description: >-
+      Capability UUID. Pass secrets.ORBIT_AGENT_SPEC_IDENTIFIER (Secrets tab).
+      Do not use vars.* for a value stored as a Secret.
+    required: true
+  target_role:
+    description: 'CANDIDATE or PRODUCTION (default CANDIDATE).'
+    required: false
+    default: 'CANDIDATE'
+  repository:
+    description: 'Canonical github:owner/repo when credential is repo-scoped. Defaults from GITHUB_REPOSITORY.'
+    required: false
   fail_on_required:
     description: 'If true, fail the job when any Required control has passed=false.'
     required: false
@@ -25,13 +37,13 @@ outputs:
     description: 'Number of Required controls that failed.'
     value: ${{ steps.scan.outputs.required_failed }}
   tier:
-    description: 'Tier returned by Orbit validation.'
+    description: 'Tier key returned by Orbit validation.'
     value: ${{ steps.scan.outputs.tier }}
   results:
     description: 'JSON array of per-control results (passed + findings).'
     value: ${{ steps.scan.outputs.results }}
   raw_llm_output:
-    description: 'Raw LLM JSON from Orbit (same payload saved server-side).'
+    description: 'Raw LLM JSON from Orbit.'
     value: ${{ steps.scan.outputs.raw_llm_output }}
 
 runs:
@@ -50,7 +62,10 @@ runs:
       id: scan
       shell: bash
       env:
-        INPUT_ORBIT_GOVERNANCE_KEY: ${{ inputs.orbit_governance_key }}
+        INPUT_ORBIT_SCANNER_TOKEN: ${{ inputs.orbit_scanner_token }}
+        INPUT_AGENT_SPEC_IDENTIFIER: ${{ inputs.agent_spec_identifier }}
+        INPUT_TARGET_ROLE: ${{ inputs.target_role }}
+        INPUT_REPOSITORY: ${{ inputs.repository }}
         INPUT_FAIL_ON_REQUIRED: ${{ inputs.fail_on_required }}
         INPUT_SOURCE: ${{ inputs.source }}
       run: python -m dm_orbit_gov_action

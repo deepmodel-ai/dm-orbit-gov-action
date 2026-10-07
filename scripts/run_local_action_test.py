@@ -6,8 +6,12 @@ Flow:
   2) Load fixture changed files
   3) MCP validate_changed_files → Orbit API (controls + LLM)
 
-Usage:
-  set ORBIT_GOVERNANCE_KEY=...   # Windows PowerShell: $env:ORBIT_GOVERNANCE_KEY="..."
+Usage (PowerShell):
+  Copy-Item .env.example .env   # fill ORBIT_SCANNER_TOKEN + agent_spec targeting
+  Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*#' -or $_ -notmatch '=') { return }
+    $k,$v = $_.Split('=',2); Set-Item -Path "env:$k" -Value $v.Trim()
+  }
   python scripts/run_local_action_test.py
 """
 
@@ -23,16 +27,23 @@ SOURCE = "local"
 
 
 def apply_inputs() -> None:
-    key = (os.environ.get("ORBIT_GOVERNANCE_KEY") or "").strip()
-    if not key:
+    token = (os.environ.get("ORBIT_SCANNER_TOKEN") or "").strip()
+    if not token:
         raise SystemExit(
-            "Set ORBIT_GOVERNANCE_KEY in the environment before running.\n"
-            "Example (PowerShell): $env:ORBIT_GOVERNANCE_KEY=\"your-key\""
+            "Set ORBIT_SCANNER_TOKEN (orb_sc_…) before running.\n"
+            "Example (PowerShell): $env:ORBIT_SCANNER_TOKEN=\"orb_sc_...\""
         )
 
-    os.environ["INPUT_ORBIT_GOVERNANCE_KEY"] = key
-    os.environ["INPUT_FAIL_ON_REQUIRED"] = FAIL_ON_REQUIRED
-    os.environ["INPUT_SOURCE"] = SOURCE
+    os.environ["INPUT_ORBIT_SCANNER_TOKEN"] = token
+    os.environ.setdefault("INPUT_FAIL_ON_REQUIRED", FAIL_ON_REQUIRED)
+    os.environ.setdefault("INPUT_SOURCE", SOURCE)
+
+    if not (os.environ.get("INPUT_AGENT_SPEC_IDENTIFIER") or "").strip():
+        raise SystemExit(
+            "Set INPUT_AGENT_SPEC_IDENTIFIER (and optionally INPUT_TARGET_ROLE).\n"
+            "See .env.example."
+        )
+    os.environ.setdefault("INPUT_TARGET_ROLE", "CANDIDATE")
 
 
 def main() -> None:
