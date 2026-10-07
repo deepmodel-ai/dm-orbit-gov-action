@@ -45,14 +45,14 @@ jobs:
         with:
           fetch-depth: 0
       - name: Orbit governance scan
-        uses: deepmodel-ai/dm-orbit-gov-action@v0.2.0
+        uses: deepmodel-ai/dm-orbit-gov-action@temp/sandbox-iac
         with:
           orbit_scanner_token: ${{ secrets.ORBIT_SCANNER_TOKEN }}
           agent_spec_identifier: ${{ secrets.ORBIT_AGENT_SPEC_IDENTIFIER }}
           target_role: CANDIDATE
 ```
 
-Pin to a release tag (`@v0.2.0`). Do not use `@master` or a feature branch in customer workflows.
+Pin to `@temp/sandbox-iac` while testing this branch. For production, pin a release tag (e.g. `@v0.2.0`).
 
 The Action does **not** read GitHub secrets by name automatically — pass them via `with:`.
 
