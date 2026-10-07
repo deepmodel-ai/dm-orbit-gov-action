@@ -11,7 +11,7 @@ from dm_orbit_gov_action.mcp_client import extract_tool_object, parse_sse_json_p
 
 
 def test_orbit_mcp_url_is_hardcoded() -> None:
-    assert ORBIT_MCP_URL == "https://dm-orbit-mcp-444791763526.us-central1.run.app/mcp"
+    assert ORBIT_MCP_URL == "https://dm-orbit-mcp-service-710581533746.us-central1.run.app/mcp"
 
 
 def test_is_likely_text_path() -> None:
