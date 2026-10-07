@@ -6,21 +6,15 @@ Reusable **composite** GitHub Action (Python) for **Orbit AI Governance** eviden
 
 ## What it does
 
-1. Calls hosted **dm-orbit-mcp** `health` (connectivity check).
+1. Calls hosted **dm-orbit-mcp** `health` (auth + connectivity).
 2. Collects **changed files** for the PR/push (capped; never uploads the full repo).
-3. Calls MCP `validate_changed_files` with that structured payload.
-4. **Orbit API** (via MCP) loads customer controls and runs LLM validation — not this Action.
+3. Calls MCP `validate_changed_files` with that payload.
+4. **Orbit API** (via MCP) loads applicable controls, runs LLM evaluation, and writes scanner evidence.
 5. Fails the job when any **Required** control has `passed=false` (default).
-
-No Docker image. No binary Action distribution. Composite Action + Python source only.
 
 ## Install in an agent repo
 
-Repo secrets:
-
-| Secret | Purpose |
-|--------|---------|
-| `ORBIT_GOVERNANCE_KEY` | Bearer key forwarded to Orbit via MCP |
+Repo secret: `ORBIT_SCANNER_TOKEN` (`orb_sc_…` from Orbit Admin → scanner credentials).
 
 ```yaml
 name: Orbit governance evidence
@@ -42,20 +36,28 @@ jobs:
       - name: Orbit governance scan
         uses: deepmodel-ai/dm-orbit-gov-action@v0.1.0
         with:
-          orbit_governance_key: ${{ secrets.ORBIT_GOVERNANCE_KEY }}
+          orbit_scanner_token: ${{ secrets.ORBIT_SCANNER_TOKEN }}
+          agent_spec_identifier: ${{ vars.ORBIT_AGENT_SPEC_IDENTIFIER }}
+          target_role: CANDIDATE
 ```
 
-Pin the Action to a release tag (create `v0.1.0` after you publish). Do not use `@master` in customer workflows.
+Pin to a release tag. Do not use `@master` in customer workflows.
 
 ## Inputs
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `orbit_governance_key` | yes | — | Orbit governance Bearer key |
-| `fail_on_required` | no | `true` | Fail job if any Required control fails |
+| `orbit_scanner_token` | yes | — | Opaque `orb_sc_…` scanner credential |
+| `agent_spec_identifier` | one of* | — | Capability UUID (with `target_role`) |
+| `target_role` | with identifier | `CANDIDATE` | `CANDIDATE` or `PRODUCTION` |
+| `agent_spec_id` | one of* | — | Pinned AgentSpec version UUID |
+| `repository` | no | from `GITHUB_REPOSITORY` | Canonical `github:owner/repo` if credential is repo-scoped |
+| `fail_on_required` | no | `true` | Fail job if Required controls fail |
 | `source` | no | `ci` | `ci` or `local` |
 
-**Not customer inputs:** Orbit API base URL, MCP URL, AI gateway URL/key/model.
+\* Exactly one targeting form: identifier+role **or** `agent_spec_id`.
+
+**Not customer inputs:** Orbit API base URL, MCP URL, AI gateway secrets.
 
 ## Outputs
 
@@ -63,7 +65,7 @@ Pin the Action to a release tag (create `v0.1.0` after you publish). Do not use 
 |--------|-------------|
 | `controls_evaluated` | Number of controls evaluated |
 | `required_failed` | Number of Required controls that failed |
-| `tier` | Tier returned by Orbit |
+| `tier` | Tier key returned by Orbit |
 | `results` | JSON array of per-control results |
 | `raw_llm_output` | Raw LLM JSON from Orbit |
 
@@ -71,33 +73,17 @@ Pin the Action to a release tag (create `v0.1.0` after you publish). Do not use 
 
 ```bash
 python -m pip install -e ".[dev]"
-# PowerShell:
-#   $env:ORBIT_GOVERNANCE_KEY="your-key"
-# bash:
-#   export ORBIT_GOVERNANCE_KEY=your-key
+cp .env.example .env   # fill ORBIT_SCANNER_TOKEN + targeting
+# load .env into the shell, then:
 python scripts/run_local_action_test.py
 ```
 
-## Layout
+## Failure behavior
 
-```text
-action.yml
-src/dm_orbit_gov_action/
-  config.py          # hardcoded ORBIT_MCP_URL
-  inputs.py
-  models.py
-  mcp_client.py
-  changed_files.py
-  runner.py
-  github_io.py
-fixtures/sample_agent/   # local smoke fixtures
-scripts/run_local_action_test.py
-tests/
-```
-
-## Development
-
-```bash
-python -m pip install -e ".[dev]"
-pytest -q
-```
+| Case | Result |
+|------|--------|
+| Missing / invalid `orb_sc_` | Job fails (401 from Orbit via MCP) |
+| Missing agent_spec targeting | Job fails at input validation |
+| MCP / Orbit HTTP / timeout | Job fails with error annotation |
+| Required control `passed=false` | Job fails when `fail_on_required=true` |
+| Recommended-only failures | Job succeeds (outputs still list findings) |

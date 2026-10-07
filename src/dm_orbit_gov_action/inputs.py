@@ -27,23 +27,49 @@ def parse_bool(raw: str, default: bool) -> bool:
 
 
 def read_run_options() -> RunOptions:
-    orbit_governance_key = require_env("INPUT_ORBIT_GOVERNANCE_KEY")
+    orbit_scanner_token = (os.environ.get("INPUT_ORBIT_SCANNER_TOKEN") or "").strip()
+    if not orbit_scanner_token:
+        raise ValueError("INPUT_ORBIT_SCANNER_TOKEN is required (orb_sc_…)")
+
     fail_on_required = parse_bool(os.environ.get("INPUT_FAIL_ON_REQUIRED", "true"), True)
     source = (os.environ.get("INPUT_SOURCE") or "ci").strip().lower()
     commit_sha = (os.environ.get("GITHUB_SHA") or "").strip()
     run_id = (os.environ.get("GITHUB_RUN_ID") or "").strip()
     scan_id = f"gha-{run_id}" if run_id else None
+    server_url = (os.environ.get("GITHUB_SERVER_URL") or "https://github.com").rstrip("/")
+    repository = (os.environ.get("GITHUB_REPOSITORY") or "").strip()
+    run_url = f"{server_url}/{repository}/actions/runs/{run_id}" if repository and run_id else None
+
+    agent_spec_identifier = (os.environ.get("INPUT_AGENT_SPEC_IDENTIFIER") or "").strip() or None
+    target_role = (os.environ.get("INPUT_TARGET_ROLE") or "CANDIDATE").strip().upper() or None
+    agent_spec_id = (os.environ.get("INPUT_AGENT_SPEC_ID") or "").strip() or None
+    repo_scope = (os.environ.get("INPUT_REPOSITORY") or "").strip() or None
+    if not repo_scope and repository:
+        # Canonical Orbit form: github:owner/repo
+        repo_scope = f"github:{repository.lower()}"
 
     if source not in {"ci", "local"}:
         raise ValueError(f"Invalid source '{source}' (expected ci|local)")
     if source == "ci" and not commit_sha:
         raise ValueError("GITHUB_SHA is required when source is ci")
+    if agent_spec_id:
+        agent_spec_identifier = None
+        target_role = None
+    elif not agent_spec_identifier:
+        raise ValueError("INPUT_AGENT_SPEC_IDENTIFIER (with target_role) or INPUT_AGENT_SPEC_ID is required")
+    if target_role and target_role not in {"CANDIDATE", "PRODUCTION"}:
+        raise ValueError("INPUT_TARGET_ROLE must be CANDIDATE or PRODUCTION")
 
     return RunOptions(
         orbit_mcp_url=ORBIT_MCP_URL,
-        orbit_governance_key=orbit_governance_key,
+        orbit_scanner_token=orbit_scanner_token,
         fail_on_required=fail_on_required,
         source=source,
         commit_sha=commit_sha,
         scan_id=scan_id,
+        agent_spec_identifier=agent_spec_identifier,
+        target_role=target_role,
+        agent_spec_id=agent_spec_id,
+        repository=repo_scope,
+        run_url=run_url,
     )
