@@ -10,18 +10,13 @@ inputs:
     required: true
   agent_spec_identifier:
     description: >-
-      Capability UUID. Use with target_role. Pass secrets.ORBIT_AGENT_SPEC_IDENTIFIER
-      (Secrets tab). Do not use vars.* for a value stored as a Secret.
-    required: false
+      Capability UUID. Pass secrets.ORBIT_AGENT_SPEC_IDENTIFIER (Secrets tab).
+      Do not use vars.* for a value stored as a Secret.
+    required: true
   target_role:
     description: 'CANDIDATE or PRODUCTION (default CANDIDATE).'
     required: false
     default: 'CANDIDATE'
-  agent_spec_id:
-    description: >-
-      Pinned AgentSpec version UUID (alternative to identifier+role).
-      Pass secrets.ORBIT_AGENT_SPEC_ID when using this form.
-    required: false
   repository:
     description: 'Canonical github:owner/repo when credential is repo-scoped. Defaults from GITHUB_REPOSITORY.'
     required: false
@@ -70,7 +65,6 @@ runs:
         INPUT_ORBIT_SCANNER_TOKEN: ${{ inputs.orbit_scanner_token }}
         INPUT_AGENT_SPEC_IDENTIFIER: ${{ inputs.agent_spec_identifier }}
         INPUT_TARGET_ROLE: ${{ inputs.target_role }}
-        INPUT_AGENT_SPEC_ID: ${{ inputs.agent_spec_id }}
         INPUT_REPOSITORY: ${{ inputs.repository }}
         INPUT_FAIL_ON_REQUIRED: ${{ inputs.fail_on_required }}
         INPUT_SOURCE: ${{ inputs.source }}

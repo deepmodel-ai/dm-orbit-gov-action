@@ -33,17 +33,16 @@ def test_extract_tool_object_from_text_content() -> None:
 
 def test_read_run_options_requires_scanner_token(monkeypatch) -> None:
     monkeypatch.delenv("INPUT_ORBIT_SCANNER_TOKEN", raising=False)
-    monkeypatch.setenv("INPUT_AGENT_SPEC_ID", "20ac6463-fbe5-4136-9c6e-e02a1bdb515b")
+    monkeypatch.setenv("INPUT_AGENT_SPEC_IDENTIFIER", "20ac6463-fbe5-4136-9c6e-e02a1bdb515b")
     monkeypatch.setenv("GITHUB_SHA", "abc")
     with pytest.raises(ValueError, match="ORBIT_SCANNER_TOKEN"):
         read_run_options()
 
 
-def test_read_run_options_requires_target(monkeypatch) -> None:
+def test_read_run_options_requires_identifier(monkeypatch) -> None:
     monkeypatch.setenv("INPUT_ORBIT_SCANNER_TOKEN", "orb_sc_test")
     monkeypatch.delenv("INPUT_AGENT_SPEC_IDENTIFIER", raising=False)
-    monkeypatch.delenv("INPUT_AGENT_SPEC_ID", raising=False)
     monkeypatch.setenv("GITHUB_SHA", "abc")
-    with pytest.raises(ValueError, match="AGENT_SPEC"):
+    with pytest.raises(ValueError, match="agent_spec_identifier"):
         read_run_options()
 

@@ -8,13 +8,6 @@ from dm_orbit_gov_action.config import ORBIT_MCP_URL
 from dm_orbit_gov_action.models import RunOptions
 
 
-def require_env(name: str) -> str:
-    value = (os.environ.get(name) or "").strip()
-    if not value:
-        raise ValueError(f"{name} is required")
-    return value
-
-
 def parse_bool(raw: str, default: bool) -> bool:
     text = (raw or "").strip().lower()
     if not text:
@@ -43,28 +36,23 @@ def read_run_options() -> RunOptions:
     repository = (os.environ.get("GITHUB_REPOSITORY") or "").strip()
     run_url = f"{server_url}/{repository}/actions/runs/{run_id}" if repository and run_id else None
 
-    agent_spec_identifier = (os.environ.get("INPUT_AGENT_SPEC_IDENTIFIER") or "").strip() or None
-    target_role = (os.environ.get("INPUT_TARGET_ROLE") or "CANDIDATE").strip().upper() or None
-    agent_spec_id = (os.environ.get("INPUT_AGENT_SPEC_ID") or "").strip() or None
+    agent_spec_identifier = (os.environ.get("INPUT_AGENT_SPEC_IDENTIFIER") or "").strip()
+    target_role = (os.environ.get("INPUT_TARGET_ROLE") or "CANDIDATE").strip().upper() or "CANDIDATE"
     repo_scope = (os.environ.get("INPUT_REPOSITORY") or "").strip() or None
     if not repo_scope and repository:
-        # Canonical Orbit form: github:owner/repo
         repo_scope = f"github:{repository.lower()}"
 
     if source not in {"ci", "local"}:
         raise ValueError(f"Invalid source '{source}' (expected ci|local)")
     if source == "ci" and not commit_sha:
         raise ValueError("GITHUB_SHA is required when source is ci")
-    if agent_spec_id:
-        agent_spec_identifier = None
-        target_role = None
-    elif not agent_spec_identifier:
+    if not agent_spec_identifier:
         raise ValueError(
-            "agent_spec_identifier (with target_role) or agent_spec_id is required. "
+            "agent_spec_identifier is required. "
             "Pass a Secret, e.g. agent_spec_identifier: ${{ secrets.ORBIT_AGENT_SPEC_IDENTIFIER }} "
             "(not vars.* — Secrets and Variables are different in GitHub Actions)."
         )
-    if target_role and target_role not in {"CANDIDATE", "PRODUCTION"}:
+    if target_role not in {"CANDIDATE", "PRODUCTION"}:
         raise ValueError("INPUT_TARGET_ROLE must be CANDIDATE or PRODUCTION")
 
     return RunOptions(
@@ -76,7 +64,6 @@ def read_run_options() -> RunOptions:
         scan_id=scan_id,
         agent_spec_identifier=agent_spec_identifier,
         target_role=target_role,
-        agent_spec_id=agent_spec_id,
         repository=repo_scope,
         run_url=run_url,
     )

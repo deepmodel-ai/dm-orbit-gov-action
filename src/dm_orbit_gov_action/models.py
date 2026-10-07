@@ -14,9 +14,8 @@ class RunOptions(BaseModel):
     source: str
     commit_sha: str
     scan_id: str | None = None
-    agent_spec_identifier: str | None = None
-    target_role: str | None = None
-    agent_spec_id: str | None = None
+    agent_spec_identifier: str
+    target_role: str
     repository: str | None = None
     run_url: str | None = None
 

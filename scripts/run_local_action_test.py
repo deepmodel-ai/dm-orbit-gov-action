@@ -38,15 +38,12 @@ def apply_inputs() -> None:
     os.environ.setdefault("INPUT_FAIL_ON_REQUIRED", FAIL_ON_REQUIRED)
     os.environ.setdefault("INPUT_SOURCE", SOURCE)
 
-    has_version = bool((os.environ.get("INPUT_AGENT_SPEC_ID") or "").strip())
-    has_role = bool((os.environ.get("INPUT_AGENT_SPEC_IDENTIFIER") or "").strip())
-    if not has_version and not has_role:
+    if not (os.environ.get("INPUT_AGENT_SPEC_IDENTIFIER") or "").strip():
         raise SystemExit(
-            "Set INPUT_AGENT_SPEC_IDENTIFIER (+ INPUT_TARGET_ROLE) or INPUT_AGENT_SPEC_ID.\n"
+            "Set INPUT_AGENT_SPEC_IDENTIFIER (and optionally INPUT_TARGET_ROLE).\n"
             "See .env.example."
         )
-    if has_role:
-        os.environ.setdefault("INPUT_TARGET_ROLE", "CANDIDATE")
+    os.environ.setdefault("INPUT_TARGET_ROLE", "CANDIDATE")
 
 
 def main() -> None:

@@ -56,11 +56,9 @@ def run() -> None:
 
         tool_arguments: dict[str, Any] = {
             "source": options.source,
-            "commit_sha": options.commit_sha or None,
-            "scan_id": options.scan_id,
-            "base_ref": changed.base_ref or None,
-            "head_ref": changed.head_ref or None,
             "truncated": changed.truncated,
+            "agent_spec_identifier": options.agent_spec_identifier,
+            "target_role": options.target_role,
             "files": [
                 {
                     "path": file.path,
@@ -69,14 +67,17 @@ def run() -> None:
                 }
                 for file in changed.files
             ],
-            "repository": options.repository,
-            "run_url": options.run_url,
         }
-        if options.agent_spec_id:
-            tool_arguments["agent_spec_id"] = options.agent_spec_id
-        else:
-            tool_arguments["agent_spec_identifier"] = options.agent_spec_identifier
-            tool_arguments["target_role"] = options.target_role
+        for key, value in (
+            ("commit_sha", options.commit_sha or None),
+            ("scan_id", options.scan_id),
+            ("base_ref", changed.base_ref or None),
+            ("head_ref", changed.head_ref or None),
+            ("repository", options.repository),
+            ("run_url", options.run_url),
+        ):
+            if value is not None and value != "":
+                tool_arguments[key] = value
 
         info("Submitting changed files via MCP validate_changed_files…")
         result = mcp.call_tool("validate_changed_files", tool_arguments)
