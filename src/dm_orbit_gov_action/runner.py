@@ -35,7 +35,7 @@ def run() -> None:
 
     with OrbitMcpClient(
         mcp_url=options.orbit_mcp_url,
-        governance_key=options.orbit_governance_key,
+        scanner_token=options.orbit_scanner_token,
     ) as mcp:
         info("Calling MCP health…")
         health = mcp.call_tool("health", {})
@@ -54,13 +54,11 @@ def run() -> None:
             f"range={changed.base_ref or '(none)'}..{changed.head_ref}{truncated_note}"
         )
 
-        tool_arguments = {
+        tool_arguments: dict[str, Any] = {
             "source": options.source,
-            "commit_sha": options.commit_sha or None,
-            "scan_id": options.scan_id,
-            "base_ref": changed.base_ref or None,
-            "head_ref": changed.head_ref or None,
             "truncated": changed.truncated,
+            "agent_spec_identifier": options.agent_spec_identifier,
+            "target_role": options.target_role,
             "files": [
                 {
                     "path": file.path,
@@ -70,30 +68,40 @@ def run() -> None:
                 for file in changed.files
             ],
         }
+        for key, value in (
+            ("commit_sha", options.commit_sha or None),
+            ("scan_id", options.scan_id),
+            ("base_ref", changed.base_ref or None),
+            ("head_ref", changed.head_ref or None),
+            ("repository", options.repository),
+            ("run_url", options.run_url),
+        ):
+            if value is not None and value != "":
+                tool_arguments[key] = value
 
         info("Submitting changed files via MCP validate_changed_files…")
         result = mcp.call_tool("validate_changed_files", tool_arguments)
 
         controls_evaluated = int(result.get("controls_evaluated") or 0)
         required_failed = int(result.get("required_failed") or 0)
-        tier = str(result.get("tier") or "")
+        tier = str(result.get("tier_key") or result.get("tier") or "")
         results = result.get("results") if isinstance(result.get("results"), list) else []
         raw_llm_output = result.get("raw_llm_output")
 
         set_output("controls_evaluated", str(controls_evaluated))
         set_output("required_failed", str(required_failed))
         set_output("tier", tier)
-        # Compact JSON for GITHUB_OUTPUT / job summary consumers.
         set_output("raw_llm_output", json.dumps(raw_llm_output, default=str))
         set_output("results", json.dumps(results, default=str))
 
         log_failed_controls(results)
+        ok = result.get("ok")
         info(
-            f"Done. controls_evaluated={controls_evaluated} "
+            f"Done. ok={ok} controls_evaluated={controls_evaluated} "
             f"required_failed={required_failed} tier={tier}"
         )
 
-        if options.fail_on_required and required_failed > 0:
+        if options.fail_on_required and (required_failed > 0 or ok is False):
             set_failed(
                 f"{required_failed} Required control(s) failed evidence checks "
                 "(see Action logs / raw_llm_output for details)"

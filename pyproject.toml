@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dm-orbit-gov-action"
-version = "0.1.0"
-description = "Orbit AI Governance evidence GitHub Action (composite + Python; MCP validate only)"
+version = "0.2.0"
+description = "Orbit AI Governance evidence GitHub Action (composite + Python; scanner evaluate bridge)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Proprietary" }
