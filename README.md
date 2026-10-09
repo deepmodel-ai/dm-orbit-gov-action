@@ -27,6 +27,8 @@ Settings → Secrets and variables → Actions → **Secrets** (not Variables):
 
 ### 2. Workflow
 
+In the **agent repo**, create `.github/workflows/orbit-governance.yml` and paste:
+
 ```yaml
 name: Orbit governance evidence
 
