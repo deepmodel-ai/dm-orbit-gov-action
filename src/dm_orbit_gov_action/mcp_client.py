@@ -14,6 +14,43 @@ from dm_orbit_gov_action.config import (
 )
 
 
+def format_mcp_failure(tool_name: str, payload: dict[str, Any]) -> str:
+    """Build a CI-friendly ``CODE: message`` line from an MCP tool error payload."""
+    code = payload.get("code")
+    message = payload.get("message")
+    detail = payload.get("detail")
+    status = payload.get("status_code")
+    if isinstance(detail, dict):
+        code = code or detail.get("code")
+        message = message or detail.get("message")
+    elif isinstance(detail, str) and not message:
+        message = detail
+
+    if code and message:
+        body = f"{code}: {message}"
+    elif message:
+        body = str(message)
+    elif code:
+        body = str(code)
+    else:
+        body = json.dumps(payload)
+
+    prefix = f"MCP tool {tool_name} failed"
+    if status is not None:
+        prefix = f"{prefix} (HTTP {status})"
+    return f"{prefix} — {body}"
+
+
+class McpToolError(RuntimeError):
+    """MCP tool returned a structured failure (Orbit governance error or MCP wrapper)."""
+
+    def __init__(self, tool_name: str, payload: dict[str, Any]) -> None:
+        self.tool_name = tool_name
+        self.payload = payload
+        super().__init__(format_mcp_failure(tool_name, payload))
+
+
+
 def parse_sse_json_payloads(text: str) -> list[dict[str, Any]]:
     payloads: list[dict[str, Any]] = []
     for block in text.split("\n\n"):
@@ -174,9 +211,7 @@ class OrbitMcpClient:
 
         payload = extract_tool_object(result)
         if payload.get("error"):
-            raise RuntimeError(
-                f"MCP tool {tool_name} failed: {json.dumps(payload)}"
-            )
+            raise McpToolError(tool_name, payload)
         return payload
 
     def post_json_rpc(

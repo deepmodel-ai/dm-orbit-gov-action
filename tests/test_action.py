@@ -7,7 +7,11 @@ import pytest
 from dm_orbit_gov_action.changed_files import is_likely_text_path
 from dm_orbit_gov_action.config import ORBIT_MCP_URL
 from dm_orbit_gov_action.inputs import read_run_options
-from dm_orbit_gov_action.mcp_client import extract_tool_object, parse_sse_json_payloads
+from dm_orbit_gov_action.mcp_client import (
+    extract_tool_object,
+    format_mcp_failure,
+    parse_sse_json_payloads,
+)
 
 
 def test_orbit_mcp_url_is_hardcoded() -> None:
@@ -45,4 +49,39 @@ def test_read_run_options_requires_identifier(monkeypatch) -> None:
     monkeypatch.setenv("GITHUB_SHA", "abc")
     with pytest.raises(ValueError, match="agent_spec_identifier"):
         read_run_options()
+
+
+def test_format_mcp_failure_surfaces_code_and_message() -> None:
+    text = format_mcp_failure(
+        "validate_changed_files",
+        {
+            "error": "orbit_api_error",
+            "status_code": 409,
+            "code": "GOV_TARGET_ROLE_UNAVAILABLE",
+            "message": "No CANDIDATE lifecycle version is available.",
+            "detail": {
+                "code": "GOV_TARGET_ROLE_UNAVAILABLE",
+                "message": "No CANDIDATE lifecycle version is available.",
+                "available_roles": ["PRODUCTION"],
+            },
+        },
+    )
+    assert "HTTP 409" in text
+    assert text.startswith("MCP tool validate_changed_files failed")
+    assert "GOV_TARGET_ROLE_UNAVAILABLE: No CANDIDATE lifecycle version is available." in text
+
+
+def test_format_mcp_failure_reads_nested_detail_when_top_level_missing() -> None:
+    text = format_mcp_failure(
+        "health",
+        {
+            "error": "orbit_api_error",
+            "status_code": 404,
+            "detail": {
+                "code": "GOV_SCANNER_TARGET_NOT_FOUND",
+                "message": "No scanner target matched.",
+            },
+        },
+    )
+    assert "GOV_SCANNER_TARGET_NOT_FOUND: No scanner target matched." in text
 
