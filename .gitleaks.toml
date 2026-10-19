@@ -1,0 +1,17 @@
+title = "dm-orbit-gov-action gitleaks config"
+
+[extend]
+useDefault = true
+
+# Env templates use empty or placeholder values.
+[[allowlists]]
+description = "Env example templates (placeholders only)"
+paths = ['''(?i)\.env\.example$''']
+
+# README / action.yml document secrets.* placeholders, not real tokens.
+[[allowlists]]
+description = "Docs and action inputs with placeholder secret references"
+paths = [
+  '''(?i)README\.md$''',
+  '''(?i)action\.yml$''',
+]
