@@ -14,7 +14,9 @@ inputs:
       Do not use vars.* for a value stored as a Secret.
     required: true
   target_role:
-    description: 'CANDIDATE or PRODUCTION (default CANDIDATE).'
+    description: >-
+      CANDIDATE (default) or PRODUCTION. After go-live the live version is PRODUCTION —
+      keep scanning it with target_role=PRODUCTION, or create a new CANDIDATE version.
     required: false
     default: 'CANDIDATE'
   repository:

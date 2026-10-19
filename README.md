@@ -66,7 +66,7 @@ Targeting is **capability + role only** (`agent_spec_identifier` + `target_role`
 |-------|----------|---------|-------------|
 | `orbit_scanner_token` | yes | — | Opaque `orb_sc_…` |
 | `agent_spec_identifier` | yes | — | Capability UUID |
-| `target_role` | no | `CANDIDATE` | `CANDIDATE` or `PRODUCTION` |
+| `target_role` | no | `CANDIDATE` | `CANDIDATE` (pre–go-live) or `PRODUCTION` (live / continuous). Wrong role after go-live returns `GOV_TARGET_ROLE_UNAVAILABLE` with `available_roles`. |
 | `repository` | no | from `GITHUB_REPOSITORY` | Canonical `github:owner/repo` if credential is repo-scoped |
 | `fail_on_required` | no | `true` | Fail job if Required controls fail |
 | `source` | no | `ci` | `ci` or `local` |
@@ -95,8 +95,10 @@ python scripts/run_local_action_test.py
 
 | Case | Result |
 |------|--------|
-| Missing / invalid `orb_sc_` | Job fails (401 from Orbit via MCP) |
+| Missing / invalid `orb_sc_` | Job fails (`GOV_SCANNER_CREDENTIAL_*` via MCP) |
 | Empty identifier (`vars` used for a Secret) | Job fails at input validation |
-| MCP / Orbit HTTP / timeout | Job fails with error annotation |
+| Wrong `target_role` after go-live (e.g. still `CANDIDATE`) | Job fails with `GOV_TARGET_ROLE_UNAVAILABLE: … Available roles: PRODUCTION` |
+| Unknown capability / wrong workspace | Job fails with `GOV_SCANNER_TARGET_NOT_FOUND` |
+| MCP / Orbit HTTP / timeout | Job fails with `CODE: message` error annotation |
 | Required control `passed=false` | Job fails when `fail_on_required=true` |
 | Recommended-only failures | Job succeeds (outputs still list findings) |
