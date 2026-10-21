@@ -1,6 +1,6 @@
 """DeepModel-owned constants for the Orbit governance Action."""
 
-ORBIT_MCP_URL = "https://dm-orbit-mcp-service-710581533746.us-central1.run.app/mcp"
+ORBIT_MCP_URL = "https://dm-orbit-mcp.deepmodel.ai/mcp"
 
 MAX_CHANGED_FILES = 40
 MAX_FILE_BYTES = 24_000
