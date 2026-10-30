@@ -71,6 +71,24 @@ def test_format_mcp_failure_surfaces_code_and_message() -> None:
     assert "GOV_TARGET_ROLE_UNAVAILABLE: No CANDIDATE lifecycle version is available." in text
 
 
+def test_format_mcp_failure_agent_spec_retired() -> None:
+    text = format_mcp_failure(
+        "validate_changed_files",
+        {
+            "error": "orbit_api_error",
+            "status_code": 409,
+            "code": "AGENT_SPEC_RETIRED",
+            "message": "The PRODUCTION version is retired and cannot accept scanner evidence.",
+            "detail": {
+                "code": "AGENT_SPEC_RETIRED",
+                "message": "The PRODUCTION version is retired and cannot accept scanner evidence.",
+            },
+        },
+    )
+    assert "HTTP 409" in text
+    assert "AGENT_SPEC_RETIRED: The PRODUCTION version is retired and cannot accept scanner evidence." in text
+
+
 def test_format_mcp_failure_reads_nested_detail_when_top_level_missing() -> None:
     text = format_mcp_failure(
         "health",
