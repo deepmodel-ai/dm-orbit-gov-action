@@ -98,6 +98,7 @@ python scripts/run_local_action_test.py
 | Missing / invalid `orb_sc_` | Job fails (`GOV_SCANNER_CREDENTIAL_*` via MCP) |
 | Empty identifier (`vars` used for a Secret) | Job fails at input validation |
 | Wrong `target_role` after go-live (e.g. still `CANDIDATE`) | Job fails with `GOV_TARGET_ROLE_UNAVAILABLE: … Available roles: PRODUCTION` |
+| Capability / requested role is **retired** | Job fails with `AGENT_SPEC_RETIRED: …` |
 | Unknown capability / wrong workspace | Job fails with `GOV_SCANNER_TARGET_NOT_FOUND` |
 | MCP / Orbit HTTP / timeout | Job fails with `CODE: message` error annotation |
 | Required control `passed=false` | Job fails when `fail_on_required=true` |
